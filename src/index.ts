@@ -1,10 +1,26 @@
+class Token {
+  constructor(public value: string) {}
+
+  toString(): string {
+    return this.value;
+  }
+}
+
 export class Parser {
   index = 0;
 
-  constructor(private args: string[]) {}
+  private constructor(private args: Token[]) {}
+
+  static fromArray(tokens: string[]) {
+    return new Parser(
+      tokens.map((value) => {
+        return new Token(value);
+      }),
+    );
+  }
 
   static fromArgv(): Parser {
-    return new Parser(process.argv.slice(2));
+    return Parser.fromArray(process.argv.slice(2));
   }
 
   finished() {
@@ -33,76 +49,137 @@ export class Parser {
   }
 }
 
+type Executor<T> = () => T;
+
+type Deb = Debug | DebugToken;
+
+class DebugToken {
+  constructor(
+    public type: string,
+    public token: Token,
+  ) {}
+
+  showTokens(): string {
+    return this.token.value;
+  }
+
+  typedTokens(): string {
+    return `${this.type}:${this.showTokens()}`;
+  }
+
+  prepend(type: string, debug: Deb): Debug {
+    return new Debug(type, [debug, this]);
+  }
+}
+
+class Debug {
+  constructor(
+    public type: string,
+    public tokens: (DebugToken | Debug)[],
+  ) {}
+
+  showTokens(): string {
+    return `[${this.tokens.map((val) => val.showTokens()).join(" ")}]`;
+  }
+
+  typedTokens(): string {
+    return `${this.type}:[${this.tokens.map((val) => val.typedTokens()).join(" ")}]`;
+  }
+
+  prepend(type: string, debug: Deb): Debug {
+    return new Debug(type, [debug, ...this.tokens]);
+  }
+}
+
 class ParseResult<T> {
-  constructor(public execute: () => T) {}
+  constructor(
+    public debug: Debug | DebugToken,
+    public execute: Executor<T>,
+  ) {}
 }
 
 type ExpressionParser<R> = (parser: Parser) => ParseResult<R>;
 
-export class Expression<R> {
-  constructor(public parse: ExpressionParser<R>) {}
+class Expression<R> {
+  constructor(
+    public name: string,
+    public parse: ExpressionParser<R>,
+  ) {}
 }
 
-export function language<R>(expression: Expression<R>): Expression<R> {
-  return new Expression((parser) => {
+export function language<R>(
+  name: string,
+  expression: Expression<R>,
+): Expression<R> {
+  return new Expression(name, (parser) => {
     const result = expression.parse(parser);
     if (!parser.finished())
       throw Error("Parsing finished with input remaining.");
-    return result;
+    return new ParseResult(new Debug(name, [result.debug]), () =>
+      result.execute(),
+    );
   });
 }
 
-class ExpressionBuilder<
+class FuncBuilder<
   Args extends unknown[] = [],
-  ParseResArgs extends ParseResult<unknown>[] = [],
+  ResArgs extends ParseResult<unknown>[] = [],
 > {
   constructor(
-    protected name: string,
-    protected argExtractor: (parser: Parser) => ParseResArgs,
+    protected arity: number,
+    protected argExtractor: (parser: Parser) => ResArgs,
   ) {}
 
   arg<R>(
     extractor: Expression<R>,
-  ): ExpressionBuilder<[...Args, R], [...ParseResArgs, ParseResult<R>]> {
-    return new ExpressionBuilder<
-      [...Args, R],
-      [...ParseResArgs, ParseResult<R>]
-    >(this.name, (parser) => [
-      ...this.argExtractor(parser),
-      extractor.parse(parser),
-    ]);
+  ): FuncBuilder<[...Args, R], [...ResArgs, ParseResult<R>]> {
+    return new FuncBuilder<[...Args, R], [...ResArgs, ParseResult<R>]>(
+      this.arity + 1,
+      (parser) => [...this.argExtractor(parser), extractor.parse(parser)],
+    );
   }
 
-  setExec<R>(exec: (...args: Args) => R): Expression<R> {
-    return new Expression<R>((parser) => {
-      if (parser.next() !== this.name)
-        throw Error("Parsed does not match wanted");
-
+  setExec<R>(exec: (...args: Args) => R): ExpressionParser<R> {
+    return (parser) => {
       const parsedArgs = this.argExtractor(parser);
 
-      return new ParseResult(() => {
-        const args = parsedArgs.map((value) => value.execute()) as Args;
-        return exec(...args);
-      });
-    });
+      return new ParseResult(
+        new Debug(
+          "body",
+          parsedArgs.map((pr) => pr.debug),
+        ),
+        () => {
+          const args = parsedArgs.map((value) => value.execute()) as Args;
+          return exec(...args);
+        },
+      );
+    };
   }
 }
 
-export function func(name: string): ExpressionBuilder {
-  return new ExpressionBuilder(name, () => []);
-}
+export const func = new FuncBuilder(0, () => []);
 
 export class Any<R> implements Expression<R> {
   private default?: Expression<R>;
 
-  constructor(private expressions: Expression<R>[] = []) {}
+  private expressions = new Map<string, ExpressionParser<R>>();
 
-  static fromDefault<R>(def: Expression<R>): Any<R> {
-    return new Any<R>().setDefault(def);
+  constructor(
+    public name: string,
+    expressions: [string, ExpressionParser<R>][] = [],
+  ) {
+    this.setExpressions(expressions);
   }
 
-  setExpressions(expressions: Expression<R>[]) {
-    this.expressions = expressions;
+  static fromDefault<R>(name: string, def: Expression<R>): Any<R> {
+    return new Any<R>(name).setDefault(def);
+  }
+
+  setExpressions(expressions: [string, ExpressionParser<R>][]) {
+    for (const item of expressions) {
+      this.expressions.set(item[0], item[1]);
+    }
+
     return this;
   }
 
@@ -112,14 +189,17 @@ export class Any<R> implements Expression<R> {
   }
 
   parse(parser: Parser): ParseResult<R> {
-    for (const expression of this.expressions) {
-      const index = parser.index;
-      try {
-        return expression.parse(parser);
-      } catch (error) {
-        parser.index = index;
-      }
+    const nameToken = parser.next();
+    const exprParser = this.expressions.get(nameToken.value);
+    if (exprParser) {
+      const pr = exprParser(parser);
+      return new ParseResult(
+        pr.debug.prepend(this.name, new DebugToken("fn", nameToken)),
+        () => pr.execute(),
+      );
     }
+
+    parser.undo();
     if (this.default) return this.default.parse(parser);
 
     throw Error("Was not able to parse any expression");
@@ -127,92 +207,110 @@ export class Any<R> implements Expression<R> {
 }
 
 abstract class BaseRepeat<C, R> implements Expression<R> {
+  public name;
   constructor(
     protected expression: Expression<C>,
     protected exit?: string,
-  ) {}
+  ) {
+    this.name = `${this.namePrefix()}.${expression.name}`;
+  }
 
-  abstract parse(parser: Parser): ParseResult<R>;
+  abstract namePrefix(): string;
 
-  _parse(parser: Parser) {
+  parse(parser: Parser) {
     const parseResult = [];
+    const debug = [];
     while (parser.peek()) {
       if (this.exit) {
-        if (parser.next() === this.exit) break;
+        const exitToken = parser.next();
+        if (exitToken.value === this.exit) {
+          debug.push(new DebugToken(`${this.name}.exit`, exitToken));
+          break;
+        }
         parser.undo();
       }
 
-      parseResult.push(this.expression.parse(parser));
+      const pr = this.expression.parse(parser);
+      parseResult.push(pr);
+      debug.push(pr.debug);
     }
 
-    return parseResult;
+    return new ParseResult(
+      new Debug(this.name, debug),
+      this.createExecutor(parseResult),
+    );
   }
+
+  protected abstract createExecutor(parseResult: ParseResult<C>[]): Executor<R>;
 }
 
 export class Repeat<R> extends BaseRepeat<R, R[]> {
-  parse(parser: Parser): ParseResult<R[]> {
-    const parseResult = this._parse(parser);
-
-    return {
-      execute: () => {
-        const result = [];
-        for (const res of parseResult) {
-          result.push(res.execute());
-        }
-        return result;
-      },
+  override namePrefix(): string {
+    return "array";
+  }
+  override createExecutor(parseResult: ParseResult<R>[]) {
+    return () => {
+      const result = [];
+      for (const res of parseResult) {
+        result.push(res.execute());
+      }
+      return result;
     };
   }
 }
 
-export class AsyncRepeat<R> extends BaseRepeat<R | Promise<R>, Promise<R[]>> {
-  parse(parser: Parser) {
-    const parseResult: ParseResult<R | Promise<R>>[] = this._parse(parser);
+export class SequentialRepeat<R> extends BaseRepeat<
+  R | Promise<R>,
+  Promise<R[]>
+> {
+  override namePrefix(): string {
+    return "seq-array";
+  }
 
-    return {
-      execute: async () => {
-        const result = [];
-        for (const res of parseResult) {
-          result.push(await res.execute());
-        }
-        return result;
-      },
+  override createExecutor(parseResult: ParseResult<R | Promise<R>>[]) {
+    return async () => {
+      const result = [];
+      for (const res of parseResult) {
+        result.push(await res.execute());
+      }
+      return result;
     };
   }
 }
 
-const parsePrimitive = <T>(parseFn: (parser: Parser) => T): Expression<T> => {
-  return new Expression((parser: Parser) => {
-    const result = parseFn(parser);
-    return new ParseResult(() => result);
+const parsePrimitive = <T>(
+  name: string,
+  parseFn: (val: string) => T,
+): Expression<T> => {
+  return new Expression(name, (parser: Parser): ParseResult<T> => {
+    const token = parser.next();
+    const result = parseFn(token.value);
+    return new ParseResult(new DebugToken(name, token), () => result);
   });
 };
 
 export const strictPrimitives = {
-  int: parsePrimitive((parser) => {
-    const n = parseFloat(parser.next());
+  int: parsePrimitive("int", (value) => {
+    const n = parseFloat(value);
     if (!Number.isInteger(n)) throw Error("Expected integer");
     return n;
   }),
-  number: parsePrimitive((parser) => {
-    const n = parseFloat(parser.next());
+  number: parsePrimitive("number", (value) => {
+    const n = parseFloat(value);
     if (!Number.isFinite(n)) throw Error("Invalid number");
     return n;
   }),
-  string: parsePrimitive((parser) => {
-    return parser.next();
-  }),
-  bool: parsePrimitive((parser) => {
-    const val = parser.next();
-    if (val === "true") return true;
-    if (val === "false") return false;
+  string: parsePrimitive("string", (value) => value),
+  bool: parsePrimitive("bool", (value) => {
+    if (value === "true") return true;
+    if (value === "false") return false;
     throw Error("Invalid boolean");
   }),
 };
 
 export const primitives = {
-  int: Any.fromDefault(strictPrimitives.int),
-  number: Any.fromDefault(strictPrimitives.number),
-  string: Any.fromDefault(strictPrimitives.string),
-  bool: Any.fromDefault(strictPrimitives.bool),
+  int: Any.fromDefault("int", strictPrimitives.int),
+  number: Any.fromDefault("number", strictPrimitives.number),
+  string: Any.fromDefault("string", strictPrimitives.string),
+  bool: Any.fromDefault("bool", strictPrimitives.bool),
 };

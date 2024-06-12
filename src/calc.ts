@@ -5,44 +5,46 @@ import { Any, Parser, Repeat, primitives, language, func } from "./index.js";
 const num = primitives.number;
 const bool = primitives.bool;
 
-const print = new Any<string>([
-  func("num")
-    .arg(num)
-    .setExec((val) => val.toString()),
-  func("bool")
-    .arg(bool)
-    .setExec((val) => val.toString()),
+const print = new Any<string>("print", [
+  ["num", func.arg(num).setExec((val) => val.toString())],
+  ["bool", func.arg(bool).setExec((val) => val.toString())],
 ]);
 
-const op = <R>(name: string, exec: (l: number, r: number) => R) =>
-  func(name).arg(num).arg(num).setExec(exec);
+const numArr = new Repeat(num, "-");
+
+const op = <R>(exec: (l: number, r: number) => R) =>
+  func.arg(num).arg(num).setExec(exec);
 
 num.setExpressions([
-  op("add", (l, r) => l + r),
-  op("sub", (l, r) => l - r),
-  op("mul", (l, r) => l * r),
-  op("div", (l, r) => l / r),
-  func("test")
-    .arg(bool)
-    .arg(num)
-    .arg(num)
-    .setExec((test, t, f) => {
-      return test ? t : f;
-    }),
-  func("sum")
-    .arg(new Repeat(num, "-"))
-    .setExec((vals) => vals.reduce((prev, nex) => prev + nex, 0)),
+  ["add", op((l, r) => l + r)],
+  ["sub", op((l, r) => l - r)],
+  ["mul", op((l, r) => l * r)],
+  ["div", op((l, r) => l / r)],
+  [
+    "test",
+    func
+      .arg(bool)
+      .arg(num)
+      .arg(num)
+      .setExec((test, t, f) => {
+        return test ? t : f;
+      }),
+  ],
+  [
+    "sum",
+    func
+      .arg(numArr)
+      .setExec((vals) => vals.reduce((prev, nex) => prev + nex, 0)),
+  ],
 ]);
 
-bool.setExpressions([op("eq", (l, r) => l === r)]);
+bool.setExpressions([["eq", op((l, r) => l === r)]]);
 
 const rl = createInterface({
   prompt: "> ",
   input: process.stdin,
   output: process.stdout,
   crlfDelay: Infinity,
-  //   history: [],
-  //   historySize: 30,
 });
 
 const onClose = () => {
@@ -58,18 +60,16 @@ for await (const line of rl) {
   }
 
   try {
-    console.log(
-      language(print)
-        .parse(
-          new Parser(
-            line
-              .trim()
-              .split(" ")
-              .filter((str) => str.length > 0),
-          ),
-        )
-        .execute(),
+    const pr = language("language", print).parse(
+      Parser.fromArray(
+        line
+          .trim()
+          .split(" ")
+          .filter((str) => str.length > 0),
+      ),
     );
+    console.log(pr.debug.typedTokens());
+    console.log(pr.execute());
   } catch (error: unknown) {
     if (error instanceof Error) console.log(error.message);
   }
