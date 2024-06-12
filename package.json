@@ -8,7 +8,7 @@
   "license": "ISC",
   "scripts": {
     "test": "node dist/test.js",
-    "build": "rimraf dist/ && tsc",
+    "build": "tsc",
     "eslint": "eslint src",
     "prettier": "npx prettier ./src --write"
   },
