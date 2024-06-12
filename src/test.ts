@@ -1,7 +1,7 @@
 import { func, language, primitives } from "./index.js";
 import { Parser } from "./parser.js";
 
-primitives.int.setExpressions([
+primitives.int.setFunctions([
   [
     "add",
     func

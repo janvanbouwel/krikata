@@ -1,5 +1,5 @@
 import { Debug, DebugToken } from "./debug.js";
-import { Grammar, quote, repeat } from "./grammar.js";
+import { Grammar, format } from "./grammar.js";
 import { Parser } from "./parser.js";
 
 type Executor<T> = () => T;
@@ -34,7 +34,7 @@ export function language<R>(
     new ExpressionParser<R>(
       (gram: Grammar) => {
         if (gram.has(type)) return gram;
-        gram.set(type, [[expression.type, "EOI"]]);
+        gram.set(type, [[format.type(expression.type), format.EOI]]);
         return expression.parser.grammar(gram);
       },
       (parser) => {
@@ -93,7 +93,7 @@ class FuncBuilder<
 
 export const func = new FuncBuilder([]);
 
-export class Any<R> implements Expression<R> {
+export class Type<R> implements Expression<R> {
   private default?: Expression<R>;
 
   private expressions = new Map<string, Func<R>>();
@@ -102,14 +102,14 @@ export class Any<R> implements Expression<R> {
     public type: string,
     expressions: [string, Func<R>][] = [],
   ) {
-    this.setExpressions(expressions);
+    this.setFunctions(expressions);
   }
 
-  static fromDefault<R>(name: string, def: Expression<R>): Any<R> {
-    return new Any<R>(name).setDefault(def);
+  static fromDefault<R>(name: string, def: Expression<R>): Type<R> {
+    return new Type<R>(name).setDefault(def);
   }
 
-  setExpressions(expressions: [string, Func<R>][]) {
+  setFunctions(expressions: [string, Func<R>][]) {
     for (const item of expressions) {
       this.expressions.set(item[0], item[1]);
     }
@@ -128,15 +128,15 @@ export class Any<R> implements Expression<R> {
       const lines = [];
       const todo = new Set<Expression<unknown>>();
       for (const [key, func] of this.expressions.entries()) {
-        const line = [quote(key)];
+        const line = [format.quote(key)];
         for (const arg of func.args) {
-          line.push(arg.type);
+          line.push(format.type(arg.type));
           todo.add(arg);
         }
         lines.push(line);
       }
       if (this.default) {
-        lines.push([this.default.type]);
+        lines.push([format.type(this.default.type)]);
         todo.add(this.default);
       }
       gram.set(this.type, lines);
@@ -177,12 +177,12 @@ abstract class BaseRepeat<C, R> implements Expression<R> {
   parser: ExpressionParser<R> = new ExpressionParser<R>(
     (gram: Grammar): Grammar => {
       if (gram.has(this.type)) return gram;
-      gram.set(
-        this.type,
-        [[repeat(this.expression.type), "EOI"]].concat(
-          this.exit ? [[repeat(this.expression.type), quote(this.exit)]] : [],
-        ),
-      );
+
+      const exptType = format.repeat(format.type(this.expression.type));
+      const rules = [[exptType, format.EOI]];
+      if (this.exit) rules.push([exptType, format.quote(this.exit)]);
+      gram.set(this.type, rules);
+
       return this.expression.parser.grammar(gram);
     },
     (parser: Parser) => {
@@ -286,8 +286,8 @@ export const strictPrimitives = {
 };
 
 export const primitives = {
-  int: Any.fromDefault("int", strictPrimitives.int),
-  number: Any.fromDefault("number", strictPrimitives.number),
-  string: Any.fromDefault("string", strictPrimitives.string),
-  bool: Any.fromDefault("bool", strictPrimitives.bool),
+  int: Type.fromDefault("int", strictPrimitives.int),
+  number: Type.fromDefault("number", strictPrimitives.number),
+  string: Type.fromDefault("string", strictPrimitives.string),
+  bool: Type.fromDefault("bool", strictPrimitives.bool),
 };

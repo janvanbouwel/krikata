@@ -1,13 +1,13 @@
 import { createInterface } from "readline";
 
-import { Any, Repeat, primitives, language, func } from "../index.js";
+import { Type, Repeat, primitives, language, func } from "../index.js";
 import { Parser } from "../parser.js";
 import { formatGrammar } from "../grammar.js";
 
 const num = primitives.number;
 const bool = primitives.bool;
 
-const print = new Any<string>("print", [
+const print = new Type<string>("print", [
   ["num", func.arg(num).setExec((val) => val.toString())],
   ["bool", func.arg(bool).setExec((val) => val.toString())],
 ]);
@@ -17,7 +17,7 @@ const numArr = new Repeat(num, "-");
 const op = <R>(exec: (l: number, r: number) => R) =>
   func.arg(num).arg(num).setExec(exec);
 
-num.setExpressions([
+num.setFunctions([
   ["add", op((l, r) => l + r)],
   ["sub", op((l, r) => l - r)],
   ["mul", op((l, r) => l * r)],
@@ -40,7 +40,7 @@ num.setExpressions([
   ],
 ]);
 
-bool.setExpressions([["eq", op((l, r) => l === r)]]);
+bool.setFunctions([["eq", op((l, r) => l === r)]]);
 
 const lang = language("language", print);
 

@@ -1,7 +1,11 @@
 export type Grammar = Map<string, string[][]>;
 
-export const repeat = (val: string) => `${val}*`;
-export const quote = (val: string) => `"${val}"`;
+const type = (val: string) => `<${val}>`;
+const repeat = (val: string) => `${val} *`;
+const quote = (val: string) => `"${val}"`;
+const EOI = "EOI";
+
+export const format = { type, repeat, quote, EOI };
 
 export function formatGrammar(grammar: Grammar): string {
   const lines = [];
