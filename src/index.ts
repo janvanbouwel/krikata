@@ -52,11 +52,14 @@ export function language<R>(expression: Expression<R>): Expression<R> {
   });
 }
 
-abstract class BaseExpressionBuilder<
+class ExpressionBuilder<
   Args extends unknown[] = [],
   ParseResArgs extends ParseResult<unknown>[] = [],
 > {
-  constructor(protected argExtractor: (parser: Parser) => ParseResArgs) {}
+  constructor(
+    protected name: string,
+    protected argExtractor: (parser: Parser) => ParseResArgs,
+  ) {}
 
   arg<R>(
     extractor: Expression<R>,
@@ -64,43 +67,30 @@ abstract class BaseExpressionBuilder<
     return new ExpressionBuilder<
       [...Args, R],
       [...ParseResArgs, ParseResult<R>]
-    >((parser) => [...this.argExtractor(parser), extractor.parse(parser)]);
+    >(this.name, (parser) => [
+      ...this.argExtractor(parser),
+      extractor.parse(parser),
+    ]);
   }
 
-  exact(value: string): ExpressionBuilder<Args, ParseResArgs> {
-    return new ExpressionBuilder((parser) => {
-      const prevResult = this.argExtractor(parser);
-      if (parser.next() !== value) throw Error("Parsed does not match wanted");
-      return prevResult;
-    });
-  }
-}
-
-class EmptyExpressionBuilder extends BaseExpressionBuilder {
-  constructor() {
-    super(() => []);
-  }
-}
-
-class ExpressionBuilder<
-  Args extends unknown[] = [],
-  ParseResArgs extends ParseResult<unknown>[] = [],
-> extends BaseExpressionBuilder<Args, ParseResArgs> {
   setExec<R>(exec: (...args: Args) => R): Expression<R> {
     return new Expression<R>((parser) => {
+      if (parser.next() !== this.name)
+        throw Error("Parsed does not match wanted");
+
       const parsedArgs = this.argExtractor(parser);
-      return {
-        execute: () => {
-          const args = parsedArgs.map((value) => value.execute()) as Args;
-          return exec(...args);
-        },
-      };
+
+      return new ParseResult(() => {
+        const args = parsedArgs.map((value) => value.execute()) as Args;
+        return exec(...args);
+      });
     });
   }
 }
 
-export const expression = new EmptyExpressionBuilder();
-export const func = (name: string) => expression.exact(name);
+export function func(name: string): ExpressionBuilder {
+  return new ExpressionBuilder(name, () => []);
+}
 
 export class Any<R> implements Expression<R> {
   private default?: Expression<R>;

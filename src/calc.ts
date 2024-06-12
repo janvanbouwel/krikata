@@ -29,7 +29,7 @@ num.setExpressions([
     .setExec((test, t, f) => {
       return test ? t : f;
     }),
-  func("test")
+  func("sum")
     .arg(new Repeat(num, "-"))
     .setExec((vals) => vals.reduce((prev, nex) => prev + nex, 0)),
 ]);
