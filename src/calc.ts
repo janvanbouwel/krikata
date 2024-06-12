@@ -68,6 +68,7 @@ for await (const line of rl) {
           .filter((str) => str.length > 0),
       ),
     );
+    console.log(pr.debug.showTokens());
     console.log(pr.debug.typedTokens());
     console.log(pr.execute());
   } catch (error: unknown) {

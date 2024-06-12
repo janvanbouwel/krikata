@@ -123,25 +123,27 @@ export function language<R>(
 
 class FuncBuilder<
   Args extends unknown[] = [],
-  ResArgs extends ParseResult<unknown>[] = [],
+  ResArgs extends Expression<unknown>[] = [],
 > {
   constructor(
     protected arity: number,
-    protected argExtractor: (parser: Parser) => ResArgs,
+    protected argExtractors: ResArgs,
   ) {}
 
   arg<R>(
     extractor: Expression<R>,
-  ): FuncBuilder<[...Args, R], [...ResArgs, ParseResult<R>]> {
-    return new FuncBuilder<[...Args, R], [...ResArgs, ParseResult<R>]>(
+  ): FuncBuilder<[...Args, R], [...ResArgs, Expression<R>]> {
+    return new FuncBuilder<[...Args, R], [...ResArgs, Expression<R>]>(
       this.arity + 1,
-      (parser) => [...this.argExtractor(parser), extractor.parse(parser)],
+      [...this.argExtractors, extractor],
     );
   }
 
   setExec<R>(exec: (...args: Args) => R): ExpressionParser<R> {
     return (parser) => {
-      const parsedArgs = this.argExtractor(parser);
+      const parsedArgs = this.argExtractors.map((extractor) =>
+        extractor.parse(parser),
+      );
 
       return new ParseResult(
         new Debug(
@@ -157,7 +159,7 @@ class FuncBuilder<
   }
 }
 
-export const func = new FuncBuilder(0, () => []);
+export const func = new FuncBuilder(0, []);
 
 export class Any<R> implements Expression<R> {
   private default?: Expression<R>;
