@@ -1,0 +1,33 @@
+{
+  "name": "krikata",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Argument parser",
+  "exports": "./dist/index.js",
+  "author": "Jan Van Bouwel",
+  "license": "ISC",
+  "scripts": {
+    "test": "node dist/test.js",
+    "build": "rimraf dist/ && tsc",
+    "eslint": "eslint src",
+    "prettier": "npx prettier . --write"
+  },
+  "devDependencies": {
+    "@sindresorhus/tsconfig": "^5.0.0",
+    "@types/node": "^20.14.2",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "eslint": "^8.57.0",
+    "prettier": "3.3.2",
+    "rimraf": "^5.0.7",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@janvanbouwel/chunked-stream": "^0.2.2"
+  }
+}
