@@ -1,22 +1,22 @@
-import { Func, Language, primitives } from "../index.js";
+import { Func, Language, Type, primitives } from "../index.js";
 import { Parser } from "../parser.js";
 
-primitives.int.setFunctions([
+const int = new Type<number>("int").setDefault(primitives.int);
+
+int.setFunctions([
   Func("add")
-    .arg(primitives.int)
-    .arg(primitives.int)
+    .arg(int)
+    .arg(int)
     .setExec((left, right) => left + right),
 
   Func("sub")
-    .arg(primitives.int)
-    .arg(primitives.int)
+    .arg(int)
+    .arg(int)
     .setExec((left, right) => left - right),
 ]);
 
 try {
-  console.log(
-    new Language("language", primitives.int).parse(Parser.fromArgv()).execute(),
-  );
+  console.log(new Language("language", int).parse(Parser.fromArgv()).execute());
 } catch (error) {
   if (error instanceof Error) console.log(error.message);
 }

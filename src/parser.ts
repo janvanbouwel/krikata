@@ -40,7 +40,7 @@ export class Parser {
     const value = this.args[this.index++];
 
     if (!value) {
-      throw Error(`Missing argument at index ${this.index.toString()}`);
+      throw Error(`Missing argument at index ${(this.index - 1).toString()}`);
     } else return value;
   }
 

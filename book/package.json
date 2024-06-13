@@ -4,14 +4,16 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "clean": "find src -iname \"*.js\" -delete",
+    "build": "npm run clean && tsc -b"
+  },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@sindresorhus/tsconfig": "^5.0.0",
     "@types/node": "^20.14.2",
     "@typescript-eslint/eslint-plugin": "^7.13.0",
-    "tsx": "^4.15.3",
     "typescript": "^5.4.5"
   },
   "dependencies": {

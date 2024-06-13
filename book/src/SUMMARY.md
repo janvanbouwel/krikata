@@ -8,6 +8,7 @@
 
   - [Defining the language](./helloworld/language.md)
   - [Inspecting the language](./helloworld/grammar.md)
+  - [Parsing and executing](./helloworld/parsing.md)
 
 - [Example: calculator](./calculator/introduction.md)
   - [Number](./calculator/number.md)

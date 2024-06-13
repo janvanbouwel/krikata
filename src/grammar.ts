@@ -6,7 +6,7 @@ export class Grammar {
   }
 }
 
-const type = (val: string) => `<${val}>`;
+const type = (val: { type: string }) => `<${val.type}>`;
 const repeat = (val: string) => `${val} *`;
 const exact = (val: string) => `"${val}"`;
 const EOI = "EOI";

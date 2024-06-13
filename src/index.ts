@@ -2,6 +2,8 @@ import { Deb, Debug, DebugToken } from "./debug.js";
 import { Grammar, format } from "./grammar.js";
 import { Parser } from "./parser.js";
 
+export { Parser };
+
 type Executor<T> = () => T;
 
 class ParseResult<T> {
@@ -37,9 +39,7 @@ export class Language<R> {
   grammar(): Grammar {
     const gram = new Grammar();
 
-    gram.store.set(this.name, [
-      [format.type(this.expression.type), format.EOI],
-    ]);
+    gram.store.set(this.name, [[format.type(this.expression), format.EOI]]);
     return this.expression.parser.grammar(gram);
   }
 
@@ -67,7 +67,7 @@ class Funct<R> {
     };
 
     for (const expr of this.args) {
-      res.rule.push(format.type(expr.type));
+      res.rule.push(format.type(expr));
       res.todo.add(expr);
     }
 
@@ -154,7 +154,7 @@ export class Type<R> implements Expression<R> {
       }
 
       if (this.default) {
-        rules.push([format.type(this.default.type)]);
+        rules.push([format.type(this.default)]);
         todo.add(this.default);
       }
       gram.store.set(this.type, rules);
@@ -194,7 +194,7 @@ abstract class BaseRepeat<C, R> implements Expression<R> {
     (gram: Grammar): Grammar => {
       if (gram.store.has(this.type)) return gram;
 
-      const exptType = format.repeat(format.type(this.expression.type));
+      const exptType = format.repeat(format.type(this.expression));
       const rules = [[exptType, format.EOI]];
       if (this.exit) rules.push([exptType, format.exact(this.exit)]);
       gram.store.set(this.type, rules);
@@ -282,7 +282,7 @@ const parsePrimitive = <T>(
   );
 };
 
-export const strictPrimitives = {
+export const primitives = {
   int: parsePrimitive("int", (value) => {
     const n = parseFloat(value);
     if (!Number.isInteger(n)) throw Error("Expected integer");
@@ -299,11 +299,4 @@ export const strictPrimitives = {
     if (value === "false") return false;
     throw Error("Invalid boolean");
   }),
-};
-
-export const primitives = {
-  int: Type.fromDefault("int", strictPrimitives.int),
-  number: Type.fromDefault("number", strictPrimitives.number),
-  string: Type.fromDefault("string", strictPrimitives.string),
-  bool: Type.fromDefault("bool", strictPrimitives.bool),
 };

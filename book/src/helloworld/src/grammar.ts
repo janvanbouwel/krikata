@@ -1,6 +1,4 @@
-import { lang } from "./greeting.js";
-
-const greet = lang;
+import { greet } from "./greeting.js";
 
 // ANCHOR: grammar
 const grammar = greet.grammar();
