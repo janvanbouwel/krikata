@@ -2,10 +2,10 @@ export type Grammar = Map<string, string[][]>;
 
 const type = (val: string) => `<${val}>`;
 const repeat = (val: string) => `${val} *`;
-const quote = (val: string) => `"${val}"`;
+const exact = (val: string) => `"${val}"`;
 const EOI = "EOI";
 
-export const format = { type, repeat, quote, EOI };
+export const format = { type, repeat, exact, EOI };
 
 export function formatGrammar(grammar: Grammar): string {
   const lines = [];

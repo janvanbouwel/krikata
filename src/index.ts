@@ -1,4 +1,4 @@
-import { Debug, DebugToken } from "./debug.js";
+import { Deb, Debug, DebugToken } from "./debug.js";
 import { Grammar, format } from "./grammar.js";
 import { Parser } from "./parser.js";
 
@@ -51,69 +51,85 @@ export function language<R>(
 
 class Func<R> {
   constructor(
+    public name: string,
     public args: Expression<unknown>[],
-    public parse: (parser: Parser) => ParseResult<R>,
+    public parse: (parser: Parser) => [Deb[], Executor<R>],
   ) {}
+
+  rule(): { rule: string[]; todo: Set<Expression<unknown>> } {
+    const res = {
+      rule: [format.exact(this.name)],
+      todo: new Set<Expression<unknown>>(),
+    };
+
+    for (const expr of this.args) {
+      res.rule.push(format.type(expr.type));
+      res.todo.add(expr);
+    }
+
+    return res;
+  }
 }
 
 class FuncBuilder<
   Args extends unknown[] = [],
   ResArgs extends Expression<unknown>[] = [],
 > {
-  constructor(protected args: ResArgs) {}
+  constructor(
+    private name: string,
+    protected args: ResArgs,
+  ) {}
 
   arg<R>(
     expression: Expression<R>,
   ): FuncBuilder<[...Args, R], [...ResArgs, Expression<R>]> {
-    return new FuncBuilder<[...Args, R], [...ResArgs, Expression<R>]>([
-      ...this.args,
-      expression,
-    ]);
+    return new FuncBuilder<[...Args, R], [...ResArgs, Expression<R>]>(
+      this.name,
+      [...this.args, expression],
+    );
   }
 
   setExec<R>(exec: (...args: Args) => R): Func<R> {
-    return new Func(this.args, (parser) => {
+    return new Func(this.name, this.args, (parser): [Deb[], Executor<R>] => {
+      const nameToken = parser.next();
+      if (nameToken.value !== this.name)
+        throw Error(`Expected ${this.name} but got ${nameToken.value}`);
+
       const parsedArgs = this.args.map((extractor) =>
         extractor.parser.parse(parser),
       );
 
-      return new ParseResult(
-        new Debug(
-          "body",
-          parsedArgs.map((pr) => pr.debug),
-        ),
+      return [
+        [new DebugToken("fn", nameToken), ...parsedArgs.map((pr) => pr.debug)],
         () => {
           const args = parsedArgs.map((value) => value.execute()) as Args;
           return exec(...args);
         },
-      );
+      ];
     });
   }
 }
 
-export const func = new FuncBuilder([]);
+export const func = (name: string) => new FuncBuilder(name, []);
 
 export class Type<R> implements Expression<R> {
   private default?: Expression<R>;
 
-  private expressions = new Map<string, Func<R>>();
+  functions = new Map<string, Func<R>>();
 
   constructor(
     public type: string,
-    expressions: [string, Func<R>][] = [],
+    functions: Func<R>[] = [],
   ) {
-    this.setFunctions(expressions);
+    this.setFunctions(functions);
   }
 
   static fromDefault<R>(name: string, def: Expression<R>): Type<R> {
     return new Type<R>(name).setDefault(def);
   }
 
-  setFunctions(expressions: [string, Func<R>][]) {
-    for (const item of expressions) {
-      this.expressions.set(item[0], item[1]);
-    }
-
+  setFunctions(functions: Func<R>[]) {
+    for (const func of functions) this.functions.set(func.name, func);
     return this;
   }
 
@@ -125,21 +141,20 @@ export class Type<R> implements Expression<R> {
   parser = new ExpressionParser<R>(
     (gram) => {
       if (gram.has(this.type)) return gram;
-      const lines = [];
+
+      const rules = [];
       const todo = new Set<Expression<unknown>>();
-      for (const [key, func] of this.expressions.entries()) {
-        const line = [format.quote(key)];
-        for (const arg of func.args) {
-          line.push(format.type(arg.type));
-          todo.add(arg);
-        }
-        lines.push(line);
+      for (const func of this.functions.values()) {
+        const { rule, todo: fnTodo } = func.rule();
+        rules.push(rule);
+        for (const expr of fnTodo) todo.add(expr);
       }
+
       if (this.default) {
-        lines.push([format.type(this.default.type)]);
+        rules.push([format.type(this.default.type)]);
         todo.add(this.default);
       }
-      gram.set(this.type, lines);
+      gram.set(this.type, rules);
 
       for (const expr of todo.values()) {
         gram = expr.parser.grammar(gram);
@@ -148,16 +163,14 @@ export class Type<R> implements Expression<R> {
     },
     (parser: Parser): ParseResult<R> => {
       const nameToken = parser.next();
-      const exprParser = this.expressions.get(nameToken.value);
+      const exprParser = this.functions.get(nameToken.value);
+      parser.undo();
       if (exprParser) {
-        const pr = exprParser.parse(parser);
-        return new ParseResult(
-          pr.debug.prepend(this.type, new DebugToken("fn", nameToken)),
-          () => pr.execute(),
-        );
+        const [debug, exec] = exprParser.parse(parser);
+
+        return new ParseResult(new Debug(this.type, debug), exec);
       }
 
-      parser.undo();
       if (this.default) return this.default.parser.parse(parser);
 
       throw Error("Was not able to parse any expression");
@@ -180,7 +193,7 @@ abstract class BaseRepeat<C, R> implements Expression<R> {
 
       const exptType = format.repeat(format.type(this.expression.type));
       const rules = [[exptType, format.EOI]];
-      if (this.exit) rules.push([exptType, format.quote(this.exit)]);
+      if (this.exit) rules.push([exptType, format.exact(this.exit)]);
       gram.set(this.type, rules);
 
       return this.expression.parser.grammar(gram);

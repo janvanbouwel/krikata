@@ -8,39 +8,38 @@ const num = primitives.number;
 const bool = primitives.bool;
 
 const print = new Type<string>("print", [
-  ["num", func.arg(num).setExec((val) => val.toString())],
-  ["bool", func.arg(bool).setExec((val) => val.toString())],
+  func("num")
+    .arg(num)
+    .setExec((val) => val.toString()),
+
+  func("bool")
+    .arg(bool)
+    .setExec((val) => val.toString()),
 ]);
 
 const numArr = new Repeat(num, "-");
 
-const op = <R>(exec: (l: number, r: number) => R) =>
-  func.arg(num).arg(num).setExec(exec);
+const op = <R>(name: string, exec: (l: number, r: number) => R) =>
+  func(name).arg(num).arg(num).setExec(exec);
 
 num.setFunctions([
-  ["add", op((l, r) => l + r)],
-  ["sub", op((l, r) => l - r)],
-  ["mul", op((l, r) => l * r)],
-  ["div", op((l, r) => l / r)],
-  [
-    "test",
-    func
-      .arg(bool)
-      .arg(num)
-      .arg(num)
-      .setExec((test, t, f) => {
-        return test ? t : f;
-      }),
-  ],
-  [
-    "sum",
-    func
-      .arg(numArr)
-      .setExec((vals) => vals.reduce((prev, nex) => prev + nex, 0)),
-  ],
+  op("add", (l, r) => l + r),
+  op("sub", (l, r) => l - r),
+  op("mul", (l, r) => l * r),
+  op("div", (l, r) => l / r),
+  func("test")
+    .arg(bool)
+    .arg(num)
+    .arg(num)
+    .setExec((test, t, f) => {
+      return test ? t : f;
+    }),
+  func("sum")
+    .arg(numArr)
+    .setExec((vals) => vals.reduce((prev, nex) => prev + nex, 0)),
 ]);
 
-bool.setFunctions([["eq", op((l, r) => l === r)]]);
+bool.setFunctions([op("eq", (l, r) => l === r)]);
 
 const lang = language("language", print);
 

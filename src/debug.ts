@@ -1,6 +1,6 @@
 import { Token } from "./parser.js";
 
-type Deb = Debug | DebugToken;
+export type Deb = Debug | DebugToken;
 export class DebugToken {
   constructor(
     public type: string,
@@ -22,7 +22,7 @@ export class DebugToken {
 export class Debug {
   constructor(
     public type: string,
-    public tokens: (DebugToken | Debug)[],
+    public tokens: Deb[],
   ) {}
 
   showTokens(): string {

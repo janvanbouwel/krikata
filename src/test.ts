@@ -2,20 +2,15 @@ import { func, language, primitives } from "./index.js";
 import { Parser } from "./parser.js";
 
 primitives.int.setFunctions([
-  [
-    "add",
-    func
-      .arg(primitives.int)
-      .arg(primitives.int)
-      .setExec((left, right) => left + right),
-  ],
-  [
-    "sub",
-    func
-      .arg(primitives.int)
-      .arg(primitives.int)
-      .setExec((left, right) => left - right),
-  ],
+  func("add")
+    .arg(primitives.int)
+    .arg(primitives.int)
+    .setExec((left, right) => left + right),
+
+  func("sub")
+    .arg(primitives.int)
+    .arg(primitives.int)
+    .setExec((left, right) => left - right),
 ]);
 
 try {
