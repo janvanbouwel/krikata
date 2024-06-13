@@ -1,8 +1,11 @@
 import { Deb, Debug, DebugToken } from "./debug.js";
 import { Grammar, format } from "./grammar.js";
 import { Parser } from "./parser.js";
+export { cli } from "./cli.js";
 
 export { Parser };
+
+export type Promisable<T> = T | PromiseLike<T>;
 
 type Executor<T> = () => T;
 
@@ -57,7 +60,7 @@ class Funct<R> {
   constructor(
     public name: string,
     public args: Expression<unknown>[],
-    public parse: (parser: Parser) => [Deb[], Executor<R>],
+    public parse: (parser: Parser) => { debug: Deb[]; exec: Executor<R> },
   ) {}
 
   rule(): { rule: string[]; todo: Set<Expression<unknown>> } {
@@ -75,26 +78,16 @@ class Funct<R> {
   }
 }
 
-class FuncBuilder<
-  Args extends unknown[] = [],
-  ResArgs extends Expression<unknown>[] = [],
-> {
+abstract class BaseFuncBuilder {
   constructor(
-    private name: string,
-    protected args: ResArgs,
+    protected name: string,
+    protected args: Expression<unknown>[],
   ) {}
 
-  arg<R>(
-    expression: Expression<R>,
-  ): FuncBuilder<[...Args, R], [...ResArgs, Expression<R>]> {
-    return new FuncBuilder<[...Args, R], [...ResArgs, Expression<R>]>(
-      this.name,
-      [...this.args, expression],
-    );
-  }
-
-  setExec<R>(exec: (...args: Args) => R): Funct<R> {
-    return new Funct(this.name, this.args, (parser): [Deb[], Executor<R>] => {
+  exec<R>(
+    executor: (parsedArgs: ParseResult<unknown>[]) => Executor<R>,
+  ): Funct<R> {
+    return new Funct(this.name, this.args, (parser) => {
       const nameToken = parser.next();
       if (nameToken.value !== this.name)
         throw Error(`Expected ${this.name} but got ${nameToken.value}`);
@@ -103,18 +96,53 @@ class FuncBuilder<
         extractor.parser.parse(parser),
       );
 
-      return [
-        [new DebugToken("fn", nameToken), ...parsedArgs.map((pr) => pr.debug)],
-        () => {
-          const args = parsedArgs.map((value) => value.execute()) as Args;
-          return exec(...args);
-        },
+      const debug = [
+        new DebugToken("fn", nameToken),
+        ...parsedArgs.map((pr) => pr.debug),
       ];
+
+      return {
+        debug,
+        exec: executor(parsedArgs),
+      };
+    });
+  }
+}
+
+class FuncBuilder<Args extends unknown[] = []> extends BaseFuncBuilder {
+  arg<R>(expression: Expression<R>): FuncBuilder<[...Args, R]> {
+    return new FuncBuilder(this.name, [...this.args, expression]);
+  }
+
+  setExec<R>(exec: (...args: Args) => R): Funct<R> {
+    return this.exec((parsedArgs) => {
+      return () => {
+        const args = parsedArgs.map((value) => value.execute()) as Args;
+        return exec(...args);
+      };
+    });
+  }
+}
+
+class AsyncFB<Args extends unknown[] = []> extends BaseFuncBuilder {
+  await<R>(expression: Expression<R>): AsyncFB<[...Args, Awaited<R>]> {
+    return new AsyncFB(this.name, [...this.args, expression]);
+  }
+
+  setExec<R>(exec: (...args: Args) => Promisable<R>): Funct<Promise<R>> {
+    return this.exec((parsedArgs) => {
+      return async () => {
+        const args = (await Promise.all(
+          parsedArgs.map((value) => value.execute()),
+        )) as Args;
+        return exec(...args);
+      };
     });
   }
 }
 
 export const Func = (name: string) => new FuncBuilder(name, []);
+export const AsyncFunc = (name: string) => new AsyncFB(name, []);
 
 export class Type<R> implements Expression<R> {
   private default?: Expression<R>;
@@ -169,7 +197,7 @@ export class Type<R> implements Expression<R> {
       const exprParser = this.functions.get(nameToken.value);
       parser.undo();
       if (exprParser) {
-        const [debug, exec] = exprParser.parse(parser);
+        const { debug, exec } = exprParser.parse(parser);
 
         return new ParseResult(new Debug(this.type, debug), exec);
       }
@@ -180,6 +208,8 @@ export class Type<R> implements Expression<R> {
     },
   );
 }
+
+export class AsyncType<R> extends Type<Promisable<R>> {}
 
 abstract class BaseRepeat<C, R> implements Expression<R> {
   public type;
@@ -247,14 +277,14 @@ export class Repeat<R> extends BaseRepeat<R, R[]> {
 }
 
 export class SequentialRepeat<R> extends BaseRepeat<
-  R | Promise<R>,
+  Promisable<R>,
   Promise<R[]>
 > {
   override namePrefix(): string {
     return "sr";
   }
 
-  override createExecutor(parseResult: ParseResult<R | Promise<R>>[]) {
+  override createExecutor(parseResult: ParseResult<Promisable<R>>[]) {
     return async () => {
       const result = [];
       for (const res of parseResult) {

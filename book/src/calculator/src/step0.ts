@@ -1,5 +1,4 @@
-import { Type, Func, Language, primitives } from "krikata";
-import { cli } from "./cli.js";
+import { Type, Func, Language, primitives, cli } from "krikata";
 
 // ANCHOR: language
 const value = new Type<number>("value");
@@ -19,4 +18,4 @@ value.setFunctions([
 const calc = new Language("calc", value);
 // ANCHOR_END: language
 
-cli(calc);
+await cli(calc);

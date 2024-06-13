@@ -1,6 +1,6 @@
-import { Language, Parser } from "krikata";
+import { Language, Parser, Promisable } from "./index.js";
 
-export function cli<R>(lang: Language<R>) {
+export async function cli<R>(lang: Language<Promisable<R>>) {
   if (process.argv[2] === "--grammar") {
     console.log(lang.grammar().format());
     return;
@@ -11,7 +11,7 @@ export function cli<R>(lang: Language<R>) {
   try {
     const parseResult = lang.parse(Parser.fromArgv());
 
-    console.log(parseResult.execute());
+    console.log(await parseResult.execute());
   } catch (error) {
     if (error instanceof Error) console.log(`${error.name}: ${error.message}`);
   }

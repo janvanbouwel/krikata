@@ -1,5 +1,4 @@
-import { Type, Func, Language, primitives } from "krikata";
-import { cli } from "./cli.js";
+import { Type, Func, Language, primitives, cli } from "krikata";
 
 const value = new Type<number>("value");
 
@@ -20,4 +19,4 @@ value.setDefault(primitives.number);
 
 const calc = new Language("calc", value);
 
-cli(calc);
+await cli(calc);
