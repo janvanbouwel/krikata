@@ -1,18 +1,17 @@
 import { createInterface } from "readline";
 
-import { Type, Repeat, primitives, language, func } from "../index.js";
+import { Type, Repeat, primitives, Language, Func } from "../index.js";
 import { Parser } from "../parser.js";
-import { formatGrammar } from "../grammar.js";
 
 const num = primitives.number;
 const bool = primitives.bool;
 
 const print = new Type<string>("print", [
-  func("num")
+  Func("num")
     .arg(num)
     .setExec((val) => val.toString()),
 
-  func("bool")
+  Func("bool")
     .arg(bool)
     .setExec((val) => val.toString()),
 ]);
@@ -20,31 +19,31 @@ const print = new Type<string>("print", [
 const numArr = new Repeat(num, "-");
 
 const op = <R>(name: string, exec: (l: number, r: number) => R) =>
-  func(name).arg(num).arg(num).setExec(exec);
+  Func(name).arg(num).arg(num).setExec(exec);
 
 num.setFunctions([
   op("add", (l, r) => l + r),
   op("sub", (l, r) => l - r),
   op("mul", (l, r) => l * r),
   op("div", (l, r) => l / r),
-  func("test")
+  Func("test")
     .arg(bool)
     .arg(num)
     .arg(num)
     .setExec((test, t, f) => {
       return test ? t : f;
     }),
-  func("sum")
+  Func("sum")
     .arg(numArr)
     .setExec((vals) => vals.reduce((prev, nex) => prev + nex, 0)),
 ]);
 
 bool.setFunctions([op("eq", (l, r) => l === r)]);
 
-const lang = language("language", print);
+const lang = new Language("language", print);
 
-const grammar = lang.parser.grammar(new Map());
-console.log(formatGrammar(grammar));
+const grammar = lang.grammar();
+console.log(grammar.format());
 // console.log(lang.parser.grammar(new Map()));
 
 if (process.argv.length > 2) {
@@ -68,7 +67,7 @@ if (process.argv.length > 2) {
     }
 
     try {
-      const pr = lang.parser.parse(
+      const pr = lang.parse(
         Parser.fromArray(
           line
             .trim()

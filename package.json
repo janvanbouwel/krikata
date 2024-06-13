@@ -26,8 +26,5 @@
   },
   "files": [
     "dist"
-  ],
-  "dependencies": {
-    "@janvanbouwel/chunked-stream": "^0.2.2"
-  }
+  ]
 }

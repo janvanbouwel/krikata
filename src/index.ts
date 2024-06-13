@@ -25,31 +25,35 @@ class Expression<R> {
   ) {}
 }
 
-export function language<R>(
-  type: string,
-  expression: Expression<R>,
-): Expression<R> {
-  return new Expression(
-    type,
-    new ExpressionParser<R>(
-      (gram: Grammar) => {
-        if (gram.has(type)) return gram;
-        gram.set(type, [[format.type(expression.type), format.EOI]]);
-        return expression.parser.grammar(gram);
-      },
-      (parser) => {
-        const result = expression.parser.parse(parser);
-        if (!parser.finished())
-          throw Error("Parsing finished with input remaining.");
-        return new ParseResult(new Debug(type, [result.debug]), () =>
-          result.execute(),
-        );
-      },
-    ),
-  );
+export class Language<R> {
+  private name;
+  constructor(
+    name: string,
+    private expression: Expression<R>,
+  ) {
+    this.name = `l.${name}`;
+  }
+
+  grammar(): Grammar {
+    const gram = new Grammar();
+
+    gram.store.set(this.name, [
+      [format.type(this.expression.type), format.EOI],
+    ]);
+    return this.expression.parser.grammar(gram);
+  }
+
+  parse(parser: Parser): ParseResult<R> {
+    const result = this.expression.parser.parse(parser);
+    if (!parser.finished())
+      throw Error("Parsing finished with input remaining.");
+    return new ParseResult(new Debug(this.name, [result.debug]), () =>
+      result.execute(),
+    );
+  }
 }
 
-class Func<R> {
+class Funct<R> {
   constructor(
     public name: string,
     public args: Expression<unknown>[],
@@ -89,8 +93,8 @@ class FuncBuilder<
     );
   }
 
-  setExec<R>(exec: (...args: Args) => R): Func<R> {
-    return new Func(this.name, this.args, (parser): [Deb[], Executor<R>] => {
+  setExec<R>(exec: (...args: Args) => R): Funct<R> {
+    return new Funct(this.name, this.args, (parser): [Deb[], Executor<R>] => {
       const nameToken = parser.next();
       if (nameToken.value !== this.name)
         throw Error(`Expected ${this.name} but got ${nameToken.value}`);
@@ -110,17 +114,16 @@ class FuncBuilder<
   }
 }
 
-export const func = (name: string) => new FuncBuilder(name, []);
+export const Func = (name: string) => new FuncBuilder(name, []);
 
 export class Type<R> implements Expression<R> {
   private default?: Expression<R>;
 
-  functions = new Map<string, Func<R>>();
+  functions = new Map<string, Funct<R>>();
 
-  constructor(
-    public type: string,
-    functions: Func<R>[] = [],
-  ) {
+  public type;
+  constructor(type: string, functions: Funct<R>[] = []) {
+    this.type = `t.${type}`;
     this.setFunctions(functions);
   }
 
@@ -128,7 +131,7 @@ export class Type<R> implements Expression<R> {
     return new Type<R>(name).setDefault(def);
   }
 
-  setFunctions(functions: Func<R>[]) {
+  setFunctions(functions: Funct<R>[]) {
     for (const func of functions) this.functions.set(func.name, func);
     return this;
   }
@@ -140,7 +143,7 @@ export class Type<R> implements Expression<R> {
 
   parser = new ExpressionParser<R>(
     (gram) => {
-      if (gram.has(this.type)) return gram;
+      if (gram.store.has(this.type)) return gram;
 
       const rules = [];
       const todo = new Set<Expression<unknown>>();
@@ -154,7 +157,7 @@ export class Type<R> implements Expression<R> {
         rules.push([format.type(this.default.type)]);
         todo.add(this.default);
       }
-      gram.set(this.type, rules);
+      gram.store.set(this.type, rules);
 
       for (const expr of todo.values()) {
         gram = expr.parser.grammar(gram);
@@ -189,12 +192,12 @@ abstract class BaseRepeat<C, R> implements Expression<R> {
 
   parser: ExpressionParser<R> = new ExpressionParser<R>(
     (gram: Grammar): Grammar => {
-      if (gram.has(this.type)) return gram;
+      if (gram.store.has(this.type)) return gram;
 
       const exptType = format.repeat(format.type(this.expression.type));
       const rules = [[exptType, format.EOI]];
       if (this.exit) rules.push([exptType, format.exact(this.exit)]);
-      gram.set(this.type, rules);
+      gram.store.set(this.type, rules);
 
       return this.expression.parser.grammar(gram);
     },
@@ -230,7 +233,7 @@ abstract class BaseRepeat<C, R> implements Expression<R> {
 
 export class Repeat<R> extends BaseRepeat<R, R[]> {
   override namePrefix(): string {
-    return "array";
+    return "r";
   }
   override createExecutor(parseResult: ParseResult<R>[]) {
     return () => {
@@ -248,7 +251,7 @@ export class SequentialRepeat<R> extends BaseRepeat<
   Promise<R[]>
 > {
   override namePrefix(): string {
-    return "seq-array";
+    return "sr";
   }
 
   override createExecutor(parseResult: ParseResult<R | Promise<R>>[]) {
@@ -267,7 +270,7 @@ const parsePrimitive = <T>(
   parseFn: (val: string) => T,
 ): Expression<T> => {
   return new Expression(
-    type,
+    `p.${type}`,
     new ExpressionParser(
       (gram) => gram,
       (parser: Parser): ParseResult<T> => {
@@ -280,18 +283,18 @@ const parsePrimitive = <T>(
 };
 
 export const strictPrimitives = {
-  int: parsePrimitive("p.int", (value) => {
+  int: parsePrimitive("int", (value) => {
     const n = parseFloat(value);
     if (!Number.isInteger(n)) throw Error("Expected integer");
     return n;
   }),
-  number: parsePrimitive("p.number", (value) => {
+  number: parsePrimitive("number", (value) => {
     const n = parseFloat(value);
     if (!Number.isFinite(n)) throw Error("Invalid number");
     return n;
   }),
-  string: parsePrimitive("p.string", (value) => value),
-  bool: parsePrimitive("p.bool", (value) => {
+  string: parsePrimitive("string", (value) => value),
+  bool: parsePrimitive("bool", (value) => {
     if (value === "true") return true;
     if (value === "false") return false;
     throw Error("Invalid boolean");

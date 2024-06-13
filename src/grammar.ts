@@ -1,4 +1,10 @@
-export type Grammar = Map<string, string[][]>;
+export class Grammar {
+  store = new Map<string, string[][]>();
+
+  format() {
+    return formatGrammar(this.store);
+  }
+}
 
 const type = (val: string) => `<${val}>`;
 const repeat = (val: string) => `${val} *`;
@@ -7,7 +13,7 @@ const EOI = "EOI";
 
 export const format = { type, repeat, exact, EOI };
 
-export function formatGrammar(grammar: Grammar): string {
+export function formatGrammar(grammar: Map<string, string[][]>): string {
   const lines = [];
 
   for (const [key, arr] of grammar.entries()) {
