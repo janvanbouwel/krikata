@@ -10,5 +10,6 @@
   - [Inspecting the language](./helloworld/grammar.md)
   - [Parsing and executing](./helloworld/parsing.md)
 
-- [Example: calculator](./calculator/introduction.md)
-  - [Number](./calculator/number.md)
+- [Calculator](./calculator/introduction.md)
+  - [Recursion](./calculator/recursion.md)
+  - [Mutual Recursion](./calculator/mut-rec.md)
