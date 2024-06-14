@@ -6,7 +6,7 @@ src = "src"
 title = "Krikata"
 
 [preprocessor.build]
-command = "node build.js"
+command = "node mdbook-build.js"
 
 
 [preprocessor.cmdrun]

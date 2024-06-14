@@ -11,14 +11,13 @@ function streamToString(stream) {
 }
 
 if (process.argv[2] == "supports") {
-  process.exit(0);
-}
-
-exec("npm run build", async (error, out, err) => {
-  if (error) process.exit(1);
-
+  exec("npm run build", async (error, out, err) => {
+    if (error) process.exit(1);
+    process.exit(0);
+  });
+} else {
   let input = await streamToString(stdin);
 
   const [_, book] = JSON.parse(input);
   console.log(JSON.stringify(book));
-});
+}
