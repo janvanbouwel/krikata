@@ -1,4 +1,4 @@
-import { Expression, Runnable, ParseResult, Promisable } from "./base.js";
+import { Executor, Expression, ParseResult, Promisable } from "./base.js";
 import { Deb, Debug, DebugToken } from "../debug.js";
 import { Grammar, format } from "../grammar.js";
 import { Parser } from "../parser.js";
@@ -7,7 +7,7 @@ class Funct<R> {
   constructor(
     public name: string,
     public args: Expression<unknown>[],
-    public parse: (parser: Parser) => { debug: Deb[]; exec: Runnable<R> },
+    public parse: (parser: Parser) => { debug: Deb[]; execute: Executor<R> },
   ) {}
 
   rule(): { rule: string[]; todo: Set<Expression<unknown>> } {
@@ -25,69 +25,51 @@ class Funct<R> {
   }
 }
 
-abstract class BaseFuncBuilder {
+class FuncBuilder<Args extends unknown[] = []> {
   constructor(
     protected name: string,
     protected args: Expression<unknown>[],
   ) {}
 
-  exec<R>(
-    executor: (parsedArgs: ParseResult<unknown>[]) => Runnable<R>,
-  ): Funct<R> {
-    return new Funct(this.name, this.args, (parser) => {
-      const nameToken = parser.next();
-      if (nameToken.value !== this.name)
-        throw Error(`Expected ${this.name} but got ${nameToken.value}`);
-
-      const parsedArgs = this.args.map((extractor) => extractor.parse(parser));
-
-      const debug = [
-        new DebugToken("fn", nameToken),
-        ...parsedArgs.map((pr) => pr.debug),
-      ];
-
-      return {
-        debug,
-        exec: executor(parsedArgs),
-      };
-    });
-  }
-}
-class FuncBuilder<Args extends unknown[] = []> extends BaseFuncBuilder {
-  arg<R>(expression: Expression<R>): FuncBuilder<[...Args, R]> {
+  arg<R>(expression: Expression<R>): FuncBuilder<[...Args, Awaited<R>]> {
     return new FuncBuilder(this.name, [...this.args, expression]);
   }
 
-  setExec<R>(exec: (...args: Args) => R): Funct<R> {
-    return this.exec((parsedArgs) => {
-      return () => {
-        const args = parsedArgs.map((value) => value.execute()) as Args;
-        return exec(...args);
-      };
-    });
-  }
-}
-class AsyncFB<Args extends unknown[] = []> extends BaseFuncBuilder {
-  await<R>(expression: Expression<R>): AsyncFB<[...Args, Awaited<R>]> {
-    return new AsyncFB(this.name, [...this.args, expression]);
-  }
+  setExec<R>(exec: (...args: Args) => Promisable<R>): Funct<R> {
+    return new Funct(
+      this.name,
+      this.args,
+      (parser): { debug: Deb[]; execute: Executor<R> } => {
+        const nameToken = parser.next();
+        if (nameToken.value !== this.name)
+          throw Error(`Expected ${this.name} but got ${nameToken.value}`);
 
-  setExec<R>(exec: (...args: Args) => Promisable<R>): Funct<Promise<R>> {
-    return this.exec((parsedArgs) => {
-      return async () => {
-        const args = (await Promise.all(
-          parsedArgs.map((value) => value.execute()),
-        )) as Args;
-        return exec(...args);
-      };
-    });
+        const parsedArgs = this.args.map((extractor) =>
+          extractor.parse(parser),
+        );
+
+        const debug = [
+          new DebugToken("fn", nameToken),
+          ...parsedArgs.map((pr) => pr.debug),
+        ];
+
+        return {
+          debug,
+          execute: async (): Promise<Awaited<R>> => {
+            const args = (await Promise.all(
+              parsedArgs.map((value) => value.execute()),
+            )) as Args;
+            return await exec(...args);
+          },
+        };
+      },
+    );
   }
 }
 
 export const Func = (name: string) => new FuncBuilder(name, []);
-export const AsyncFunc = (name: string) => new AsyncFB(name, []);
 
-export abstract class BaseType<R> implements Expression<R> {
+export class Type<R> implements Expression<R> {
   private default?: Expression<R>;
 
   functions = new Map<string, Funct<R>>();
@@ -136,7 +118,7 @@ export abstract class BaseType<R> implements Expression<R> {
     const exprParser = this.functions.get(nameToken.value);
     parser.undo();
     if (exprParser) {
-      const { debug, exec: execute } = exprParser.parse(parser);
+      const { debug, execute } = exprParser.parse(parser);
 
       return { debug: new Debug(this.type, debug), execute };
     }
@@ -146,7 +128,3 @@ export abstract class BaseType<R> implements Expression<R> {
     throw Error("Was not able to parse any expression");
   }
 }
-
-export class Type<R> extends BaseType<R extends Promise<unknown> ? never : R> {}
-
-export class AsyncType<R> extends BaseType<Promisable<R>> {}

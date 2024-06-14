@@ -76,7 +76,7 @@ if (process.argv.length > 2) {
       );
       console.log(pr.debug.showTokens());
       console.log(pr.debug.typedTokens());
-      console.log(pr.execute());
+      console.log(await pr.execute());
     } catch (error: unknown) {
       if (error instanceof Error) console.log(error.message);
     }

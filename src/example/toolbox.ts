@@ -1,21 +1,13 @@
 import { readFile, writeFile } from "fs/promises";
-import {
-  AsyncFunc,
-  AsyncType,
-  Func,
-  Language,
-  Repeat,
-  cli,
-  primitives,
-} from "../index.js";
+import { Func, Language, Repeat, Type, cli, primitives } from "../index.js";
 
 const stringArr = new Repeat(primitives.string, "-");
 
-const source = new AsyncType<string>("source");
+const source = new Type<string>("source");
 
 source.setFunctions([
-  AsyncFunc("readFile")
-    .await(primitives.string)
+  Func("readFile")
+    .arg(primitives.string)
     .setExec((filename) => {
       return readFile(filename, { encoding: "utf-8" });
     }),
@@ -28,11 +20,11 @@ source.setFunctions([
     .setExec((by, vals) => vals.join(by)),
 ]);
 
-const command = new AsyncType<void>("command");
+const command = new Type<void>("command");
 command.setFunctions([
-  AsyncFunc("writeFile")
-    .await(primitives.string)
-    .await(source)
+  Func("writeFile")
+    .arg(primitives.string)
+    .arg(source)
     .setExec(async (filename, content) => {
       await writeFile(filename, content);
     }),

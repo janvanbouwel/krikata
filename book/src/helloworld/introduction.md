@@ -4,7 +4,7 @@ We step through the process of defining, parsing and executing a language using 
 
 ```
 > hello world
-"Hello world! It is a great day today!"
+"<!-- cmdrun node src/cli.js hello world -->"
 > hi
-"Hi mysterious person!"
+"<!-- cmdrun node src/cli.js hi -->"
 ```

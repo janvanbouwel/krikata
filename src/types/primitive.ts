@@ -16,7 +16,10 @@ class Primitive<T> implements Expression<T> {
   parse(parser: Parser): ParseResult<T> {
     const token = parser.next();
     const result = this.parseFn(token.value);
-    return { debug: new DebugToken(this.type, token), execute: () => result };
+    return {
+      debug: new DebugToken(this.type, token),
+      execute: () => Promise.resolve(result),
+    };
   }
 }
 

@@ -5,7 +5,7 @@ import { Parser } from "krikata";
 try {
   const parseResult = greet.parse(Parser.fromArgv());
 
-  console.log(parseResult.execute());
+  console.log(await parseResult.execute());
 } catch (error) {
   if (error instanceof Error) console.log(`${error.name}: ${error.message}`);
 }

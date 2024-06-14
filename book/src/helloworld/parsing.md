@@ -1,6 +1,6 @@
 # Parsing and executing
 
-With our language `greet` defined and inspected, we can now parse and execute a program. Parsing requires a `Parser`, which can easily be constructed from a process`s command line arguments.
+With our language `greet` defined and inspected, we can now parse and execute a program. Parsing requires a `Parser`, which can easily be constructed from a process's command line arguments. Note that execution returns a `Promise` and has to be awaited.
 
 ```typescript
 {{#include src/cli.ts:parse-exec}}

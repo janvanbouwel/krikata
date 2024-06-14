@@ -4,11 +4,12 @@ import { Parser } from "../parser.js";
 
 export type Promisable<T> = T | PromiseLike<T>;
 
-export type Runnable<T> = () => T;
+type Runnable<T> = () => T;
+export type Executor<R> = Runnable<PromiseLike<Awaited<R>>>;
 
 export interface ParseResult<T> {
   debug: Debug | DebugToken;
-  execute: Runnable<T>;
+  execute: Executor<T>;
 }
 
 export interface Expression<R> {
