@@ -5,9 +5,9 @@ import {
   Func,
   Language,
   Repeat,
+  cli,
   primitives,
 } from "../index.js";
-import { cli } from "../cli.js";
 
 const stringArr = new Repeat(primitives.string, "-");
 

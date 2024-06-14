@@ -1,6 +1,6 @@
 import { createInterface } from "readline";
 
-import { Type, Repeat, primitives, Language, Func, Parser } from "../index.js";
+import { Func, Language, Parser, Repeat, Type, primitives } from "../index.js";
 
 const num = new Type<number>("number").setDefault(primitives.number);
 const bool = new Type<boolean>("bool").setDefault(primitives.bool);

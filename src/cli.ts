@@ -1,6 +1,6 @@
-import { Language, Parser, Promisable } from "./index.js";
+import { Language, Parser } from "./index.js";
 
-export async function cli<R>(lang: Language<Promisable<R>>) {
+export async function cli<R>(lang: Language<R | PromiseLike<R>>) {
   if (process.argv[2] === "--grammar") {
     console.log(lang.grammar().format());
     return;

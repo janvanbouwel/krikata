@@ -1,4 +1,6 @@
-import { Func, Language, Type, primitives } from "../index.js";
+import { primitives } from "../types/primitive.js";
+import { Func, Type } from "../types/type.js";
+import { Language } from "../types/base.js";
 import { Parser } from "../parser.js";
 
 const int = new Type<number>("int").setDefault(primitives.int);

@@ -13,7 +13,7 @@ const EOI = "EOI";
 
 export const format = { type, repeat, exact, EOI };
 
-export function formatGrammar(grammar: Map<string, string[][]>): string {
+function formatGrammar(grammar: Map<string, string[][]>): string {
   const lines = [];
 
   for (const [key, arr] of grammar.entries()) {
