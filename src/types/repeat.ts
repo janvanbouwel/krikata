@@ -28,7 +28,7 @@ abstract class BaseRepeat<R> implements Expression<R[]> {
     const debug = [];
     while (parser.peek()) {
       if (this.exit) {
-        const exitToken = parser.next();
+        const exitToken = parser.next({ type: "" });
         if (exitToken.value === this.exit) {
           debug.push(new DebugToken(`${this.type}.exit`, exitToken));
           break;

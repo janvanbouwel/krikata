@@ -40,12 +40,12 @@ class FuncBuilder<Args extends unknown[] = []> {
       this.name,
       this.args,
       (parser): { debug: Deb[]; execute: Executor<R> } => {
-        const nameToken = parser.next();
+        const nameToken = parser.next({ type: this.name });
         if (nameToken.value !== this.name)
           throw Error(`Expected ${this.name} but got ${nameToken.value}`);
 
-        const parsedArgs = this.args.map((extractor) =>
-          extractor.parse(parser),
+        const parsedArgs = this.args.map((expression) =>
+          expression.parse(parser),
         );
 
         const debug = [
@@ -114,7 +114,8 @@ export class Type<R> implements Expression<R> {
   }
 
   parse(parser: Parser): ParseResult<R> {
-    const nameToken = parser.next();
+    const nameToken = parser.next(this);
+
     const exprParser = this.functions.get(nameToken.value);
     parser.undo();
     if (exprParser) {
@@ -125,6 +126,8 @@ export class Type<R> implements Expression<R> {
 
     if (this.default) return this.default.parse(parser);
 
-    throw Error("Was not able to parse any expression");
+    throw Error(
+      `Unexpected token ${nameToken.toStringAt()} for type ${format.type(this)}`,
+    );
   }
 }

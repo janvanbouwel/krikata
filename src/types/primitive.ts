@@ -1,43 +1,53 @@
 import { Expression, ParseResult } from "./base.js";
 import { DebugToken } from "../debug.js";
-import { Grammar } from "../grammar.js";
-import { Parser } from "../parser.js";
+import { Grammar, format } from "../grammar.js";
+import { Parser, Token } from "../parser.js";
 
 class Primitive<T> implements Expression<T> {
+  type: string;
   constructor(
-    public type: string,
-    private parseFn: (val: string) => T,
-  ) {}
+    type: string,
+    private parseFn: (val: Token) => T,
+  ) {
+    this.type = `p.${type}`;
+  }
 
   grammar(grammar: Grammar): Grammar {
     return grammar;
   }
 
   parse(parser: Parser): ParseResult<T> {
-    const token = parser.next();
-    const result = this.parseFn(token.value);
-    return {
-      debug: new DebugToken(this.type, token),
-      execute: () => Promise.resolve(result),
-    };
+    const token = parser.next(this);
+
+    try {
+      const result = this.parseFn(token);
+      return {
+        debug: new DebugToken(this.type, token),
+        execute: () => Promise.resolve(result),
+      };
+    } catch (error) {
+      throw Error(
+        `Unexpected token ${token.toStringAt()} for type ${format.type(this)}`,
+      );
+    }
   }
 }
 
 export const primitives = {
-  int: new Primitive("int", (value) => {
-    const n = parseFloat(value);
-    if (!Number.isInteger(n)) throw Error("Expected integer");
+  int: new Primitive("int", (token) => {
+    const n = parseFloat(token.value);
+    if (!Number.isInteger(n)) throw Error();
     return n;
   }),
-  number: new Primitive("number", (value) => {
-    const n = parseFloat(value);
-    if (!Number.isFinite(n)) throw Error("Invalid number");
+  number: new Primitive("number", (token) => {
+    const n = parseFloat(token.value);
+    if (!Number.isFinite(n)) throw Error();
     return n;
   }),
-  string: new Primitive("string", (value) => value),
-  bool: new Primitive("bool", (value) => {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    throw Error("Invalid boolean");
+  string: new Primitive("string", (token) => token.value),
+  bool: new Primitive("bool", (token) => {
+    if (token.value === "true") return true;
+    if (token.value === "false") return false;
+    throw Error();
   }),
 };

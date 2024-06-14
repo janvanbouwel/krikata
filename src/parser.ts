@@ -1,10 +1,21 @@
+import { format } from "./grammar.js";
+
 export class Token {
-  constructor(public value: string) {}
+  constructor(
+    public value: string,
+    public at: string,
+  ) {}
 
   toString(): string {
     return this.value;
   }
+
+  toStringAt(): string {
+    return `${format.exact(this.value)} at ${this.at}`;
+  }
 }
+
+export class ParserEmptyError extends Error {}
 
 export class Parser {
   index = 0;
@@ -13,8 +24,8 @@ export class Parser {
 
   static fromArray(tokens: string[]) {
     return new Parser(
-      tokens.map((value) => {
-        return new Token(value);
+      tokens.map((value, index) => {
+        return new Token(value, `index ${index.toString()}`);
       }),
     );
   }
@@ -36,11 +47,13 @@ export class Parser {
     return this;
   }
 
-  next() {
+  next(type: { type: string }) {
     const value = this.args[this.index++];
 
     if (!value) {
-      throw Error(`Missing argument at index ${(this.index - 1).toString()}`);
+      throw new ParserEmptyError(
+        `Parser finished but expected type ${format.type(type)}.`,
+      );
     } else return value;
   }
 

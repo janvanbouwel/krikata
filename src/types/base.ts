@@ -39,7 +39,9 @@ export class Language<R> {
   parse(parser: Parser): ParseResult<R> {
     const result = this.expression.parse(parser);
     if (!parser.finished())
-      throw Error("Parsing finished with input remaining.");
+      throw Error(
+        `Unexpected token ${parser.next({ type: this.name }).toStringAt()}.`,
+      );
     return {
       debug: new Debug(this.name, [result.debug]),
       execute: () => result.execute(),
