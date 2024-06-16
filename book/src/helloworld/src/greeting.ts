@@ -1,10 +1,10 @@
-import { Type, Func, Language, primitives } from "krikata";
+import { Type, Func, Language, primitives, Constant } from "krikata";
 
 // ANCHOR: greeting
 const greeting = new Type<string>("greeting");
 
 greeting.setFunctions([
-  Func("hi").setExec(() => `Hi mysterious person!`),
+  Constant("hi", () => `Hi mysterious person!`),
   Func("hello")
     .arg(primitives.string)
     .setExec((value: string) => `Hello ${value}! It is a great day today!`),

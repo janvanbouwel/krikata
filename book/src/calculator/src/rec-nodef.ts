@@ -1,4 +1,4 @@
-import { Type, Func, Language, primitives, cli } from "krikata";
+import { Type, Func, Language, primitives, cli, Constant } from "krikata";
 
 const value = new Type<number>("value");
 
@@ -18,7 +18,7 @@ value.setFunctions([
     .arg(primitives.number)
     .setExec((val) => val),
   // ANCHOR_END: im
-  Func("pi").setExec(() => 3.14),
+  Constant("pi", () => 3.14),
 ]);
 
 const calc = new Language("calc", value);

@@ -1,4 +1,12 @@
-import { Type, Func, Language, primitives, cli } from "krikata";
+import {
+  Type,
+  Func,
+  Language,
+  primitives,
+  cli,
+  Repeat,
+  Constant,
+} from "krikata";
 
 const value = new Type<number>("value");
 
@@ -11,11 +19,14 @@ value.setFunctions([
     .arg(value)
     .arg(value)
     .setExec((left, right) => left * right),
-  Func("pi").setExec(() => 3.14),
+  // ANCHOR: sum
+  Func("sum")
+    .arg(new Repeat(value))
+    .setExec((args: number[]) => args.reduce((sum, next) => sum + next, 0)),
+  // ANCHOR_END: sum
+  Constant("pi", () => 3.14),
 ]);
-// ANCHOR: default
 value.setDefault(primitives.number);
-// ANCHOR_END: default
 
 const calc = new Language("calc", value);
 

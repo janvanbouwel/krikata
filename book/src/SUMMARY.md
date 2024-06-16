@@ -11,5 +11,12 @@
   - [Parsing and executing](./helloworld/parsing.md)
 
 - [Calculator](./calculator/introduction.md)
+
   - [Recursion](./calculator/recursion.md)
-  - [Mutual Recursion](./calculator/mut-rec.md)
+  - [Repetition](./calculator/repeat.md)
+  - [Advanced Repetition](./calculator/repeat2.md)
+
+# Notes
+
+- [Primitives](./notes/primitives.md)
+- [Async](./notes/async.md)

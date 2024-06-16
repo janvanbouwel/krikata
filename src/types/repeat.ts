@@ -50,7 +50,7 @@ abstract class BaseRepeat<R> implements Expression<R[]> {
   protected abstract exec(parseResult: ParseResult<R>[]): Promise<R[]>;
 }
 
-export class Sequence<R> extends BaseRepeat<R> {
+export class Repeat<R> extends BaseRepeat<R> {
   override async exec(parseResult: ParseResult<R>[]) {
     // return Array.fromAsync(parseResult, (pr) => pr.execute());
     const result = [];
@@ -61,7 +61,7 @@ export class Sequence<R> extends BaseRepeat<R> {
   }
 }
 
-export class Repeat<R> extends BaseRepeat<R> {
+export class Parallel<R> extends BaseRepeat<R> {
   override exec(parseResult: ParseResult<R>[]) {
     return Promise.all(parseResult.map((pr) => pr.execute()));
   }

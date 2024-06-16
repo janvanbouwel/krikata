@@ -56,10 +56,13 @@ class FuncBuilder<Args extends unknown[] = []> {
         return {
           debug,
           execute: async (): Promise<Awaited<R>> => {
-            const args = (await Promise.all(
-              parsedArgs.map((value) => value.execute()),
-            )) as Args;
-            return await exec(...args);
+            // await Array.fromAsync(parsedArgs, (pr) => pr.execute());
+            const args = [];
+            for (const pr of parsedArgs) {
+              args.push(await pr.execute());
+            }
+
+            return await exec(...(args as Args));
           },
         };
       },
@@ -68,6 +71,9 @@ class FuncBuilder<Args extends unknown[] = []> {
 }
 
 export const Func = (name: string) => new FuncBuilder(name, []);
+export const Constant = <R>(name: string, exec: () => Promisable<R>) => {
+  return Func(name).setExec(exec);
+};
 
 export class Type<R> implements Expression<R> {
   private default?: Expression<R>;
@@ -78,6 +84,10 @@ export class Type<R> implements Expression<R> {
   constructor(type: string, functions: Funct<R>[] = []) {
     this.type = `t.${type}`;
     this.setFunctions(functions);
+  }
+
+  static fromFunc<R>(func: Funct<R>): Type<R> {
+    return new Type(func.name, [func]);
   }
 
   setFunctions(functions: Funct<R>[]) {
