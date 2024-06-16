@@ -39,4 +39,4 @@ We can run this using the
 5
 ```
 
-For more information read the book!
+For more information, read the [book](https://janvanbouwel.github.io/krikata/)!
