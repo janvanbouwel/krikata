@@ -2,10 +2,14 @@
   "name": "krikata",
   "type": "module",
   "version": "0.1.0",
-  "description": "Argument parser",
+  "description": "Framework to create Domain Specific Languages.",
   "exports": "./dist/index.js",
   "author": "Jan Van Bouwel",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/janvanbouwel/krikata.git"
+  },
   "scripts": {
     "test": "node dist/test.js",
     "build": "tsc",
@@ -26,5 +30,12 @@
   },
   "files": [
     "dist"
+  ],
+  "keywords": [
+    "domain-specific-language",
+    "arguments",
+    "commands",
+    "cli",
+    "parsing"
   ]
 }
