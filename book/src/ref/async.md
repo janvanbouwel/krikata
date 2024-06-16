@@ -1,4 +1,4 @@
-# Async
+# Async Execution
 
 As Krikata is mainly intended for running commands, both the `Language` and all intermediate executions are inherently asynchronous, with all Promises being awaited before being passed to other functions.
 

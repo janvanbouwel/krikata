@@ -1,4 +1,4 @@
-# Calculator
+# Example: Calculator
 
 In this chapter we will incrementally build up a basic calculator. As a starting point we trivially adapt the language `greet` from the previous chapter, into the language `calc`.
 
