@@ -6,7 +6,7 @@ const show = new Type<string>("value");
 // ANCHOR: mybool
 const mybool = new Type<boolean>("mybool", [
   Constant("T", () => true),
-  Constant("T", () => false),
+  Constant("F", () => false),
 ]);
 // ANCHOR_END: mybool
 
