@@ -1,6 +1,7 @@
 import { format } from "./grammar.js";
+import * as base from "./base.js";
 
-export class Token {
+export class Token implements base.Token {
   constructor(
     public value: string,
     public at: string,
@@ -17,7 +18,7 @@ export class Token {
 
 export class ParserEmptyError extends Error {}
 
-export class Parser {
+export class Parser implements base.Parser {
   index = 0;
 
   private constructor(private args: Token[]) {}

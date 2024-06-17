@@ -1,4 +1,4 @@
-import { Token } from "./parser.js";
+import { Token } from "./base.js";
 
 export type Deb = Debug | DebugToken;
 export class DebugToken {
@@ -8,7 +8,7 @@ export class DebugToken {
   ) {}
 
   showTokens(): string {
-    return this.token.value;
+    return this.token.toString();
   }
 
   typedTokens(): string {

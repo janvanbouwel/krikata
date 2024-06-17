@@ -10,7 +10,7 @@ import {
 import { setTimeout } from "timers/promises";
 
 // ANCHOR: lang
-const sleep = Type.fromFunc(Constant("sleep", () => setTimeout(10)));
+const sleep = Constant("sleep", () => setTimeout(10)).toType();
 
 const run = new Type<void>("run", [
   Func("repeat")

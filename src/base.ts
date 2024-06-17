@@ -1,6 +1,18 @@
-import { Debug, DebugToken } from "../debug.js";
-import { Grammar, format } from "../grammar.js";
-import { Parser } from "../parser.js";
+import { Debug, DebugToken } from "./debug.js";
+import { Grammar, format } from "./grammar.js";
+
+export interface Token {
+  toString(): string;
+  toStringAt(): string;
+}
+
+export interface Parser {
+  finished(): boolean;
+  peek(): boolean;
+  undo(): this;
+  next(type: { type: string }): Token;
+  lastIndex(): number;
+}
 
 export type Promisable<T> = T | PromiseLike<T>;
 

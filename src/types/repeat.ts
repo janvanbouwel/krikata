@@ -1,7 +1,6 @@
-import { Expression, ParseResult } from "./base.js";
+import { Expression, ParseResult, Parser } from "../base.js";
 import { Debug, DebugToken } from "../debug.js";
 import { Grammar, format } from "../grammar.js";
-import { Parser } from "../parser.js";
 
 abstract class BaseRepeat<R> implements Expression<R[]> {
   public type;
@@ -29,7 +28,7 @@ abstract class BaseRepeat<R> implements Expression<R[]> {
     while (parser.peek()) {
       if (this.exit) {
         const exitToken = parser.next({ type: "" });
-        if (exitToken.value === this.exit) {
+        if (exitToken.toString() === this.exit) {
           debug.push(new DebugToken(`${this.type}.exit`, exitToken));
           break;
         }

@@ -1,7 +1,12 @@
-import { Executor, Expression, ParseResult, Promisable } from "./base.js";
+import {
+  Executor,
+  Expression,
+  ParseResult,
+  Parser,
+  Promisable,
+} from "../base.js";
 import { Deb, Debug, DebugToken } from "../debug.js";
 import { Grammar, format } from "../grammar.js";
-import { Parser } from "../parser.js";
 
 class Funct<R> {
   constructor(
@@ -23,6 +28,10 @@ class Funct<R> {
 
     return res;
   }
+
+  toType(): Type<R> {
+    return new Type<R>(this.name, [this]);
+  }
 }
 
 class FuncBuilder<Args extends unknown[] = []> {
@@ -41,8 +50,8 @@ class FuncBuilder<Args extends unknown[] = []> {
       this.args,
       (parser): { debug: Deb[]; execute: Executor<R> } => {
         const nameToken = parser.next({ type: this.name });
-        if (nameToken.value !== this.name)
-          throw Error(`Expected ${this.name} but got ${nameToken.value}`);
+        if (nameToken.toString() !== this.name)
+          throw Error(`Expected ${this.name} but got ${nameToken.toString()}`);
 
         const parsedArgs = this.args.map((expression) =>
           expression.parse(parser),
@@ -86,10 +95,6 @@ export class Type<R> implements Expression<R> {
     this.setFunctions(functions);
   }
 
-  static fromFunc<R>(func: Funct<R>): Type<R> {
-    return new Type(func.name, [func]);
-  }
-
   setFunctions(functions: Funct<R>[]) {
     for (const func of functions) this.functions.set(func.name, func);
     return this;
@@ -126,7 +131,7 @@ export class Type<R> implements Expression<R> {
   parse(parser: Parser): ParseResult<R> {
     const nameToken = parser.next(this);
 
-    const exprParser = this.functions.get(nameToken.value);
+    const exprParser = this.functions.get(nameToken.toString());
     parser.undo();
     if (exprParser) {
       const { debug, execute } = exprParser.parse(parser);

@@ -1,13 +1,12 @@
-import { Expression, ParseResult } from "./base.js";
+import { Expression, ParseResult, Parser, Token } from "../base.js";
 import { DebugToken } from "../debug.js";
 import { Grammar, format } from "../grammar.js";
-import { Parser, Token } from "../parser.js";
 
-class Primitive<T> implements Expression<T> {
+class Primitive<R> implements Expression<R> {
   type: string;
   constructor(
     type: string,
-    private parseFn: (val: Token) => T,
+    private parseFn: (val: Token) => R,
   ) {
     this.type = `p.${type}`;
   }
@@ -16,7 +15,7 @@ class Primitive<T> implements Expression<T> {
     return grammar;
   }
 
-  parse(parser: Parser): ParseResult<T> {
+  parse(parser: Parser): ParseResult<R> {
     const token = parser.next(this);
 
     try {
@@ -35,19 +34,19 @@ class Primitive<T> implements Expression<T> {
 
 export const primitives = {
   int: new Primitive("int", (token) => {
-    const n = parseFloat(token.value);
+    const n = parseFloat(token.toString());
     if (!Number.isInteger(n)) throw Error();
     return n;
   }),
   number: new Primitive("number", (token) => {
-    const n = parseFloat(token.value);
+    const n = parseFloat(token.toString());
     if (!Number.isFinite(n)) throw Error();
     return n;
   }),
-  string: new Primitive("string", (token) => token.value),
+  string: new Primitive("string", (token) => token.toString()),
   bool: new Primitive("bool", (token) => {
-    if (token.value === "true") return true;
-    if (token.value === "false") return false;
+    if (token.toString() === "true") return true;
+    if (token.toString() === "false") return false;
     throw Error();
   }),
 };

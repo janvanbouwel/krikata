@@ -1,4 +1,4 @@
-export { Language } from "./types/base.js";
+export { Language } from "./base.js";
 
 export { Type, Func, Constant } from "./types/type.js";
 export { primitives } from "./types/primitive.js";
